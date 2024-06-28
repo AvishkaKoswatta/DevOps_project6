@@ -1,0 +1,59 @@
+pipeline {
+    agent any
+
+    environment {
+        DB_ROOT_PASSWORD = 
+        DB_DATABASE = 'laravel'
+        DB_USERNAME = 'root'
+        DB_PASSWORD = 'your_database_user_password'
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                git 'https://github.com/AvishkaKoswatta/DevOps_project6.git' 
+            }
+        }
+        
+        stage('Build Docker Images') {
+            steps {
+                script {
+                    docker.build('laravel-app', './laravel')
+                    docker.build('mysql', './mysql') // This step is redundant because the MySQL image is pulled from Docker Hub
+                }
+            }
+        }
+
+        stage('Run Docker Containers') {
+            steps {
+                script {
+                    docker.compose.up '-d'
+                }
+            }
+        }
+        
+        stage('Run Migrations') {
+            steps {
+                script {
+                    docker.compose.exec('laravel-app', 'php artisan migrate')
+                }
+            }
+        }
+        
+        stage('Run Tests') {
+            steps {
+                script {
+                    docker.compose.exec('laravel-app', 'php artisan test')
+                }
+            }
+        }
+
+        stage('Clean Up') {
+            steps {
+                script {
+                    docker.compose.down '--volumes'
+                }
+            }
+        }
+    }
+}
